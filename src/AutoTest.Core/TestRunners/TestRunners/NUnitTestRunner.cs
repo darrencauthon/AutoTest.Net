@@ -63,7 +63,8 @@ namespace AutoTest.Core.TestRunners.TestRunners
 	
 	            proc.Start();
 	            var parser = new NUnitTestResponseParser(_bus);
-	            parser.Parse(proc.StandardOutput.ReadToEnd(), runInfos);
+                var nUnitResult = GetTheNUnitTestRunResult(proc.StandardOutput);
+			    parser.Parse(nUnitResult, runInfos);
 	            proc.WaitForExit();
 				foreach (var result in parser.Result)
 		            results.Add(result);
@@ -173,5 +174,28 @@ namespace AutoTest.Core.TestRunners.TestRunners
 				return "--";
 			}
 		}
+
+        private string GetTheNUnitTestRunResult(StreamReader streamReader)
+        {
+            var stringBuilder = new StringBuilder();
+
+            while (streamReader.EndOfStream == false)
+            {
+                var readLine = streamReader.ReadLine();
+                stringBuilder.Append(readLine);
+
+                // checking for the last expected line because the test 
+                // runner suspends on 64-bit after the last line is hit
+                if (ThisIsTheLastLineExpectedFromNUnit(readLine))
+                    return stringBuilder.ToString();
+            }
+
+            return stringBuilder.ToString();
+        }
+
+        private static bool ThisIsTheLastLineExpectedFromNUnit(string readLine)
+        {
+            return string.IsNullOrEmpty(readLine) == false && readLine.EndsWith("</test-results>");
+        }
     }
 }
